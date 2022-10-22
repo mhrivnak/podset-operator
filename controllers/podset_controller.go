@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	appv1alpha1 "github.com/mhrivnak/podset-operator/api/v1alpha1"
 )
@@ -156,6 +157,12 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appv1alpha1.PodSet{}).
 		Owns(&corev1.Pod{}).
+		// This predicate will filter out update events that don't change the
+		// resource's generation, such as status updates. Often a controller
+		// doesn't need to reconcile when only the status of a resource changed,
+		// and in those situation, this predicate reduces the number of times
+		// Reconcile gets called.
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
 
