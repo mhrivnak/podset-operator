@@ -22,10 +22,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	appv1alpha1 "github.com/mhrivnak/podset-operator/api/v1alpha1"
@@ -117,6 +119,21 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 
+	if numAvailable < instance.Spec.Replicas {
+		log.Info("Scaling up pods", "Currently available", numAvailable, "Required replicas", instance.Spec.Replicas)
+		// Define a new Pod object
+		pod := newPodForCR(instance)
+		// Set PodSet instance as the owner and controller
+		if err := controllerutil.SetControllerReference(instance, pod, r.Scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+		err = r.Create(ctx, pod)
+		if err != nil {
+			log.Error(err, "Failed to create pod", "pod.name", pod.Name)
+			return ctrl.Result{}, err
+		}
+	}
+
 	log.Info("reconcile succeeded")
 	return ctrl.Result{}, nil
 }
@@ -125,5 +142,43 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appv1alpha1.PodSet{}).
+		Owns(&corev1.Pod{}).
 		Complete(r)
+}
+
+// newPodForCR returns a busybox pod with the same name/namespace as the cr
+func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
+	labels := map[string]string{
+		"app":     cr.Name,
+		"version": "v0.1",
+	}
+	yes := true
+	no := false
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: cr.Name + "-pod",
+			Namespace:    cr.Namespace,
+			Labels:       labels,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:    "busybox",
+					Image:   "quay.io/quay/busybox",
+					Command: []string{"sleep", "3600"},
+					// security best practices
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: &no,
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
+						},
+						RunAsNonRoot: &yes,
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
+				},
+			},
+		},
+	}
 }
