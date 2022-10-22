@@ -134,6 +134,19 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 	}
 
+	if numAvailable > instance.Spec.Replicas {
+		log.Info("Scaling down pods", "Currently available", numAvailable, "Required replicas", instance.Spec.Replicas)
+		diff := numAvailable - instance.Spec.Replicas
+		dpods := available[:diff]
+		for i := range dpods {
+			err = r.Delete(ctx, &dpods[i])
+			if err != nil {
+				log.Error(err, "Failed to delete pod", "pod.name", dpods[i].Name)
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
 	log.Info("reconcile succeeded")
 	return ctrl.Result{}, nil
 }
