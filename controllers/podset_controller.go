@@ -18,11 +18,15 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	appv1alpha1 "github.com/mhrivnak/podset-operator/api/v1alpha1"
 )
@@ -47,10 +51,73 @@ type PodSetReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := ctrllog.FromContext(ctx)
 
-	// TODO(user): your logic here
+	// Fetch the PodSet instance
+	instance := &appv1alpha1.PodSet{}
+	err := r.Get(ctx, req.NamespacedName, instance)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// Request object not found; it could have been deleted after
+			// the reconcile request was queued. Owned objects (in our case,
+			// Pods) are automatically garbage collected, so there is nothing
+			// for us to do. Return and don't requeue.
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object. By returning an error, the library will log
+		// that error and requeue the resource with backoff logic.
+		return ctrl.Result{}, err
+	}
 
+	// List all pods owned by this PodSet instance
+	podList := &corev1.PodList{}
+	lbs := map[string]string{
+		"app":     instance.Name,
+		"version": "v0.1",
+	}
+	labelSelector := labels.SelectorFromSet(lbs)
+	listOps := &client.ListOptions{Namespace: instance.Namespace, LabelSelector: labelSelector}
+	if err = r.List(ctx, podList, listOps); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Find matching pods that are in phase pending or running
+	var available []corev1.Pod
+	for _, pod := range podList.Items {
+		// skip pods that are being deleted
+		if pod.ObjectMeta.DeletionTimestamp != nil {
+			continue
+		}
+		if pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodPending {
+			available = append(available, pod)
+		}
+	}
+
+	// count available pods
+	numAvailable := int32(len(available))
+
+	// collect names of available pods
+	availableNames := []string{}
+	for _, pod := range available {
+		availableNames = append(availableNames, pod.ObjectMeta.Name)
+	}
+
+	// Update the status only if it differs from the previous status. That helps
+	// reduce load on the api-server.
+	status := appv1alpha1.PodSetStatus{
+		PodNames:          availableNames,
+		AvailableReplicas: numAvailable,
+	}
+	if !reflect.DeepEqual(instance.Status, status) {
+		instance.Status = status
+		err = r.Status().Update(ctx, instance)
+		if err != nil {
+			log.Error(err, "Failed to update PodSet status")
+			return ctrl.Result{}, err
+		}
+	}
+
+	log.Info("reconcile succeeded")
 	return ctrl.Result{}, nil
 }
 
