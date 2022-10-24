@@ -38,6 +38,31 @@ We should now see the api, config, and controllers directories.
 
 ## Hello World!
 
+As we implement the controller, we will iteratively add imports. For
+brevity and convinience, add the final imports now and uncomment as they
+are used.
+
+```go
+import (
+	"context"
+	// "reflect"
+
+	// corev1 "k8s.io/api/core/v1"
+	// "k8s.io/apimachinery/pkg/api/errors"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log" // TODO(you) This one gets removed
+	// ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	// "sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	// TODO(you) Make sure this is your repo!
+	appv1alpha1 "github.com/mhrivnak/podset-operator/api/v1alpha1"
+)
+```
 Let’s now observe the default `controllers/podset_controller.go` file,
 starting with `SetupWithManager`.
 
@@ -53,9 +78,7 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 For us, the key line is `For(&appv1alpha1.PodSet{})`, which causes the
 reconcile loop to be run each time a PodSet is created, updated, or deleted.
 
-Let's begin by logging "Hello World". 
-
-(Add to imports: `ctrllog "sigs.k8s.io/controller-runtime/pkg/log`)
+Let's begin by logging "Hello World".
 
 Change the `Reconcile` function to:
 ```
@@ -180,8 +203,6 @@ validation and customized print columns.
 Next, lets use our the `Replicas` field in our Reconcile loop.
 Modify the PodSet controller logic at `controllers/podset_controller.go`:
 
-(Add to imports: "k8s.io/apimachinery/pkg/api/errors")
-
 
 ```
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -285,7 +306,7 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 ```
 
-Now we can restart the Operator, delete and recreate the CR. 
+Now we can restart the Operator, delete and recreate the CR.
 
 `kubectl get podsets podset-sample -o yaml`
 
@@ -601,7 +622,7 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 
 Predicates filter events, preventing the Reconcile from running when
 unnecessary. Controller runtime provides predicates, or you can
-implement your own. 
+implement your own.
 
 ```
 // SetupWithManager sets up the controller with the Manager.
@@ -658,6 +679,4 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 		},
 	}
 }
-
-
-
+```
