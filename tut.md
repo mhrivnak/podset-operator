@@ -66,7 +66,7 @@ import (
 Let’s now observe the default `controllers/podset_controller.go` file,
 starting with `SetupWithManager`.
 
-```
+```go
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -81,7 +81,8 @@ reconcile loop to be run each time a PodSet is created, updated, or deleted.
 Let's begin by logging "Hello World".
 
 Change the `Reconcile` function to:
-```
+
+```go
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 	log.Info("Hello World")
@@ -156,7 +157,7 @@ the PodSet API for the auto-generation.
 Users will need to tell the Operator how many Pods we want, so lets add
 `Replicas`.
 
-```
+```go
 type PodSetSpec struct {
 	// Replicas is the desired number of pods for the PodSet
 	// +kubebuilder:validation:Minimum=1
@@ -175,7 +176,7 @@ information on markers for config/code generation can be found
 
 Let's go ahead and add the Status fields that we will eventually use.
 
-```
+```go
 // PodSetStatus defines the observed state of PodSet
 type PodSetStatus struct {
 	PodNames          []string `json:"podNames"`
@@ -204,7 +205,7 @@ Next, lets use our the `Replicas` field in our Reconcile loop.
 Modify the PodSet controller logic at `controllers/podset_controller.go`:
 
 
-```
+```go
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 
@@ -244,7 +245,7 @@ step.
 
 Let's again edit our Reconcile function:
 
-```
+```go
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 
@@ -312,7 +313,7 @@ Now we can restart the Operator, delete and recreate the CR.
 
 Will give us back (abbreviated):
 
-```
+```yaml
 apiVersion: app.example.com/v1alpha1
 kind: PodSet
 metadata:
@@ -334,7 +335,7 @@ At last, we get to actually create the Pods!
 
 First, we need to tell the manager that it will own Pods too.
 
-```
+```go
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -346,8 +347,8 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 Next, we create a helper function for creating a Pod.
 
-```
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
+```go
+// newPodForCR returns a pod with the same name/namespace as the cr
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod
 	return &corev1.Pod{
                ObjectMeta: metav1.ObjectMeta{
@@ -357,8 +358,8 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod
                Spec: corev1.PodSpec{
                        Containers: []corev1.Container{
                                {
-                                       Name:    "busybox",
-                                       Image:   "quay.io/quay/busybox",
+                                       Name:    "fancy-alpine",
+                                       Image:   "quay.io/amacdona/strauss",
                                        Command: []string{"sleep", "3600"},
                                },
                        },
@@ -370,8 +371,7 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod
 Finally, we create pods if there aren't enough, and remove pods if there
 are too many. The whole controller should now look like this:
 
-```
-
+```go
 package controllers
 
 import (
@@ -502,7 +502,7 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
+// newPodForCR returns a pod with the same name/namespace as the cr
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -512,8 +512,8 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    "busybox",
-					Image:   "quay.io/quay/busybox",
+					Name:    "fancy-alpine",
+					Image:   "quay.io/amacdona/strauss",
 					Command: []string{"sleep", "3600"},
 				},
 			},
@@ -580,7 +580,7 @@ correctness and performance, particularly on large clusters.
 
 Add labelSelector to the listOpts.
 
-```
+```go
 // List all pods owned by this PodSet instance
 listOps := &client.ListOptions{Namespace: instance.Namespace}
 lbs := map[string]string{
@@ -593,7 +593,7 @@ listOps := &client.ListOptions{Namespace: instance.Namespace, LabelSelector: lab
 
 You will also need to add the labels to the newPodForCR helper
 
-```
+```go
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 	labels := map[string]string{
 		"app":     cr.Name,
@@ -608,8 +608,8 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    "busybox",
-					Image:   "quay.io/quay/busybox",
+					Name:    "fancy-alpine",
+					Image:   "quay.io/amacdona/strauss",
 					Command: []string{"sleep", "3600"},
 				},
 			},
@@ -624,7 +624,7 @@ Predicates filter events, preventing the Reconcile from running when
 unnecessary. Controller runtime provides predicates, or you can
 implement your own.
 
-```
+```go
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -642,8 +642,8 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 ### Do: Limit container permissions
 
-```
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
+```go
+// newPodForCR returns a pod with the same name/namespace as the cr
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 	labels := map[string]string{
 		"app":     cr.Name,
@@ -660,8 +660,8 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    "busybox",
-					Image:   "quay.io/quay/busybox",
+					Name:    "fancy-alpine",
+					Image:   "quay.io/amacdona/strauss",
 					Command: []string{"sleep", "3600"},
 					// security best practices
 					SecurityContext: &corev1.SecurityContext{

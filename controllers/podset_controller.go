@@ -183,7 +183,7 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    "alpine-with-user",
+					Name:    "fancy-alpine",
 					Image:   "quay.io/amacdona/strauss",
 					Command: []string{"sleep", "3600"},
 					// security best practices
