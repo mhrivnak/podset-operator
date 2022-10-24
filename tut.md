@@ -96,7 +96,7 @@ make run
 ```
 kubectl apply -f config/samples/app_v1alpha1_podset.yaml
 ```
-You'll see it startup and then you'll see if we ;w were successful in
+You'll see it startup and then you'll see if we were successful in
 the logs.
 
 ```
@@ -150,7 +150,7 @@ information on markers for config/code generation can be found
 [here](https://book.kubebuilder.io/reference/markers.html).
 
 
-Let's go ahead and the Status fields that we will eventually use.
+Let's go ahead and add the Status fields that we will eventually use.
 
 ```
 // PodSetStatus defines the observed state of PodSet
@@ -207,9 +207,9 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 ```
 
-If you forgot to cleanup after "Hello World", stop the controller with `CTRL+C`, delete the
-PodSet CR with `kubectl delete podset podset-sample`, and uninstall the
-PodSet CRD with `make uninstall`.
+Reminder: If you forgot to cleanup after "Hello World", stop the
+controller with `CTRL+C` and uninstall the PodSet CRD with `make
+uninstall`. (Hint: you'll have to remember how to do this next time.)
 
 Reinstall the updated CRD, start the controller with `make run`, and in
 another session, the CR with `kubectl apply -f config/samples/app_v1alpha1_podset.yaml`
@@ -226,7 +226,6 @@ Let's again edit our Reconcile function:
 ```
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
-	log.Info("Hello World")
 
 	// Fetch the PodSet instance
 	instance := &appv1alpha1.PodSet{}
@@ -286,7 +285,7 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 ```
 
-Now we can restart the Operator, delete and recreate the CR.
+Now we can restart the Operator, delete and recreate the CR. 
 
 `kubectl get podsets podset-sample -o yaml`
 
@@ -392,7 +391,6 @@ type PodSetReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
-	log.Info("Hello World")
 
 	// Fetch the PodSet instance
 	instance := &appv1alpha1.PodSet{}
