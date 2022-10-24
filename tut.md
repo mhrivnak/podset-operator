@@ -21,7 +21,7 @@ Kubebuilder to scaffold a minimal operator.
 
 Initialize a new Go-based Operator SDK project for the PodSet Operator:
 
-Note: Be sure to substitute your github handle for mhrivnak :)
+Note: Be sure to substitute your GitHub handle for mhrivnak :)
 
 `operator-sdk init --domain=example.com --repo=github.com/mhrivnak/podset-operator`
 
@@ -39,7 +39,7 @@ We should now see the api, config, and controllers directories.
 ## Hello World!
 
 As we implement the controller, we will iteratively add imports. For
-brevity and convinience, add the final imports now and uncomment as they
+brevity and convenience, add the final imports now and uncomment as they
 are used.
 
 ```go
@@ -348,7 +348,7 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 Next, we create a helper function for creating a Pod.
 
 ```go
-// newPodForCR returns a pod with the same name/namespace as the cr
+// newPodForCR returns a pod with the same name/namespace as the CR
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod
 	return &corev1.Pod{
                ObjectMeta: metav1.ObjectMeta{
@@ -532,7 +532,7 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 Once again, delete the CR, restart the controller, and recreate the CR.
 
-Verify the Podset exists:
+Verify the PodSet exists:
 
 `kubectl get podsets`
 
@@ -565,7 +565,7 @@ Lets see if it can scale down too.
 
 Our PodSet controller creates pods containing OwnerReferences in their metadata section. This ensures they will be removed upon deletion of the podset-sample CR.
 
-Observe the OwnerReference set on a Podset’s pod:
+Observe the OwnerReference set on a PodSet’s pod:
 
 `kubectl get pods -o yaml | grep ownerReferences -A10`
 
@@ -643,13 +643,13 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 ### Do: Limit container permissions
 
 ```go
-// newPodForCR returns a pod with the same name/namespace as the cr
+// newPodForCR returns a pod with the same name/namespace as the CR
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 	labels := map[string]string{
 		"app":     cr.Name,
 		"version": "v0.1",
 	}
-	// yes := true
+	yes := true
 	no := false
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -669,7 +669,7 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{"ALL"},
 						},
-						// RunAsNonRoot: &yes,
+						RunAsNonRoot: &yes,
 						SeccompProfile: &corev1.SeccompProfile{
 							Type: corev1.SeccompProfileTypeRuntimeDefault,
 						},
