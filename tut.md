@@ -199,7 +199,7 @@ Regenerate object YAMLs (including the CRDs!):
 
 Thanks to our comment markers, observe that we now have a newly
 generated CRD YAML that reflects the `spec.replicas` OpenAPI v3 schema
-validation and customized print columns.
+validation.
 
 `cat config/crd/bases/app.example.com_podsets.yaml`
 
