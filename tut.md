@@ -92,14 +92,14 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 ```
 
-Next, we need to generate the CRD for a PodSet. We'll cover this in a
-moment. For now just run:
+Next, we need to generate the CRD for a PodSet. We'll cover the details in a
+moment. For now just run the following to generate the CRD from the Go structs:
 
 ```
 make manifests
 ```
 
-Make sure the module requirements are installed.
+Make sure the module requirements are installed:
 
 ```
 go mod tidy
@@ -113,15 +113,23 @@ Install the CRD (allowing PodSets to be created later) onto the cluster:
 make install
 ```
 
-Now run your operator locally
+Next create an instance of the PodSet, so that when the operator runs,
+it will find a resource in the api-server to reconcile.
+
+```
+kubectl apply -f config/samples/app_v1alpha1_podset.yaml
+```
+
+Now run your operator locally on your workstation. In production, operators
+typically run as a Pod in the cluster they are connected to. But for developers,
+it is helpful to run the operator as a process on your local computer for
+a faster development inner-loop.
+
 
 ```
 make run
 ```
 
-```
-kubectl apply -f config/samples/app_v1alpha1_podset.yaml
-```
 You'll see it startup and then you'll see if we were successful in
 the logs.
 
@@ -156,7 +164,7 @@ crucial files, so you don't have to! Let’s inspect one of the files we
 the PodSet API for the auto-generation.
 
 `PodSetSpec` represents the desired state, (input comes from PodSet CR).
-Users will need to tell the Operator how many Pods we want, so lets add
+Users will need to tell the Operator how many Pods they want, so let's add
 `Replicas`.
 
 ```go
@@ -203,9 +211,8 @@ validation.
 
 `cat config/crd/bases/app.example.com_podsets.yaml`
 
-Next, lets use our the `Replicas` field in our Reconcile loop.
+Next let's use the `Replicas` field in our Reconcile loop.
 Modify the PodSet controller logic at `controllers/podset_controller.go`:
-
 
 ```go
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
