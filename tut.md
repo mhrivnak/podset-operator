@@ -42,6 +42,8 @@ As we implement the controller, we will iteratively add imports. For
 brevity and convenience, add the final imports now and uncomment as they
 are used.
 
+Edit `controllers/podset_controller.go`
+
 ```go
 import (
 	"context"
