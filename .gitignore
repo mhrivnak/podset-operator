@@ -16,3 +16,6 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Any binaries for the code generation
+bin/*

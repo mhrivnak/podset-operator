@@ -21,7 +21,7 @@ Kubebuilder to scaffold a minimal operator.
 
 Initialize a new Go-based Operator SDK project for the PodSet Operator:
 
-Note: Be sure to substitute your github handle for mhrivnak :)
+Note: Be sure to substitute your GitHub handle for mhrivnak :)
 
 `operator-sdk init --domain=example.com --repo=github.com/mhrivnak/podset-operator`
 
@@ -38,10 +38,37 @@ We should now see the api, config, and controllers directories.
 
 ## Hello World!
 
+As we implement the controller, we will iteratively add imports. For
+brevity and convenience, add the final imports now and uncomment as they
+are used.
+
+Edit `controllers/podset_controller.go`
+
+```go
+import (
+	"context"
+	// "reflect"
+
+	// corev1 "k8s.io/api/core/v1"
+	// "k8s.io/apimachinery/pkg/api/errors"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	// "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log" // TODO(you) This one gets removed
+	// ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	// "sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	// TODO(you) Make sure this is your repo!
+	appv1alpha1 "github.com/mhrivnak/podset-operator/api/v1alpha1"
+)
+```
 Let’s now observe the default `controllers/podset_controller.go` file,
 starting with `SetupWithManager`.
 
-```
+```go
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -53,12 +80,11 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 For us, the key line is `For(&appv1alpha1.PodSet{})`, which causes the
 reconcile loop to be run each time a PodSet is created, updated, or deleted.
 
-Let's begin by logging "Hello World". 
-
-(Add to imports: `ctrllog "sigs.k8s.io/controller-runtime/pkg/log`)
+Let's begin by logging "Hello World".
 
 Change the `Reconcile` function to:
-```
+
+```go
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 	log.Info("Hello World")
@@ -96,7 +122,7 @@ make run
 ```
 kubectl apply -f config/samples/app_v1alpha1_podset.yaml
 ```
-You'll see it startup and then you'll see if we ;w were successful in
+You'll see it startup and then you'll see if we were successful in
 the logs.
 
 ```
@@ -133,7 +159,7 @@ the PodSet API for the auto-generation.
 Users will need to tell the Operator how many Pods we want, so lets add
 `Replicas`.
 
-```
+```go
 type PodSetSpec struct {
 	// Replicas is the desired number of pods for the PodSet
 	// +kubebuilder:validation:Minimum=1
@@ -150,9 +176,9 @@ information on markers for config/code generation can be found
 [here](https://book.kubebuilder.io/reference/markers.html).
 
 
-Let's go ahead and the Status fields that we will eventually use.
+Let's go ahead and add the Status fields that we will eventually use.
 
-```
+```go
 // PodSetStatus defines the observed state of PodSet
 type PodSetStatus struct {
 	PodNames          []string `json:"podNames"`
@@ -173,17 +199,15 @@ Regenerate object YAMLs (including the CRDs!):
 
 Thanks to our comment markers, observe that we now have a newly
 generated CRD YAML that reflects the `spec.replicas` OpenAPI v3 schema
-validation and customized print columns.
+validation.
 
 `cat config/crd/bases/app.example.com_podsets.yaml`
 
 Next, lets use our the `Replicas` field in our Reconcile loop.
 Modify the PodSet controller logic at `controllers/podset_controller.go`:
 
-(Add to imports: "k8s.io/apimachinery/pkg/api/errors")
 
-
-```
+```go
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
 
@@ -207,9 +231,9 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 ```
 
-If you forgot to cleanup after "Hello World", stop the controller with `CTRL+C`, delete the
-PodSet CR with `kubectl delete podset podset-sample`, and uninstall the
-PodSet CRD with `make uninstall`.
+Reminder: If you forgot to cleanup after "Hello World", stop the
+controller with `CTRL+C` and uninstall the PodSet CRD with `make
+uninstall`. (Hint: you'll have to remember how to do this next time.)
 
 Reinstall the updated CRD, start the controller with `make run`, and in
 another session, the CR with `kubectl apply -f config/samples/app_v1alpha1_podset.yaml`
@@ -223,10 +247,9 @@ step.
 
 Let's again edit our Reconcile function:
 
-```
+```go
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
-	log.Info("Hello World")
 
 	// Fetch the PodSet instance
 	instance := &appv1alpha1.PodSet{}
@@ -292,7 +315,7 @@ Now we can restart the Operator, delete and recreate the CR.
 
 Will give us back (abbreviated):
 
-```
+```yaml
 apiVersion: app.example.com/v1alpha1
 kind: PodSet
 metadata:
@@ -314,7 +337,7 @@ At last, we get to actually create the Pods!
 
 First, we need to tell the manager that it will own Pods too.
 
-```
+```go
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -326,8 +349,8 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 Next, we create a helper function for creating a Pod.
 
-```
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
+```go
+// newPodForCR returns a pod with the same name/namespace as the CR
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod
 	return &corev1.Pod{
                ObjectMeta: metav1.ObjectMeta{
@@ -337,8 +360,8 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod
                Spec: corev1.PodSpec{
                        Containers: []corev1.Container{
                                {
-                                       Name:    "busybox",
-                                       Image:   "quay.io/quay/busybox",
+                                       Name:    "fancy-alpine",
+                                       Image:   "quay.io/amacdona/strauss",
                                        Command: []string{"sleep", "3600"},
                                },
                        },
@@ -350,8 +373,7 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod
 Finally, we create pods if there aren't enough, and remove pods if there
 are too many. The whole controller should now look like this:
 
-```
-
+```go
 package controllers
 
 import (
@@ -392,7 +414,6 @@ type PodSetReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrllog.FromContext(ctx)
-	log.Info("Hello World")
 
 	// Fetch the PodSet instance
 	instance := &appv1alpha1.PodSet{}
@@ -483,7 +504,7 @@ func (r *PodSetReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
+// newPodForCR returns a pod with the same name/namespace as the cr
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -493,8 +514,8 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    "busybox",
-					Image:   "quay.io/quay/busybox",
+					Name:    "fancy-alpine",
+					Image:   "quay.io/amacdona/strauss",
 					Command: []string{"sleep", "3600"},
 				},
 			},
@@ -513,7 +534,7 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 Once again, delete the CR, restart the controller, and recreate the CR.
 
-Verify the Podset exists:
+Verify the PodSet exists:
 
 `kubectl get podsets`
 
@@ -546,7 +567,7 @@ Lets see if it can scale down too.
 
 Our PodSet controller creates pods containing OwnerReferences in their metadata section. This ensures they will be removed upon deletion of the podset-sample CR.
 
-Observe the OwnerReference set on a Podset’s pod:
+Observe the OwnerReference set on a PodSet’s pod:
 
 `kubectl get pods -o yaml | grep ownerReferences -A10`
 
@@ -561,7 +582,7 @@ correctness and performance, particularly on large clusters.
 
 Add labelSelector to the listOpts.
 
-```
+```go
 // List all pods owned by this PodSet instance
 listOps := &client.ListOptions{Namespace: instance.Namespace}
 lbs := map[string]string{
@@ -574,7 +595,7 @@ listOps := &client.ListOptions{Namespace: instance.Namespace, LabelSelector: lab
 
 You will also need to add the labels to the newPodForCR helper
 
-```
+```go
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 	labels := map[string]string{
 		"app":     cr.Name,
@@ -589,8 +610,8 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    "busybox",
-					Image:   "quay.io/quay/busybox",
+					Name:    "fancy-alpine",
+					Image:   "quay.io/amacdona/strauss",
 					Command: []string{"sleep", "3600"},
 				},
 			},
@@ -603,9 +624,9 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 
 Predicates filter events, preventing the Reconcile from running when
 unnecessary. Controller runtime provides predicates, or you can
-implement your own. 
+implement your own.
 
-```
+```go
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -623,14 +644,14 @@ func (r *PodSetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 ### Do: Limit container permissions
 
-```
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
+```go
+// newPodForCR returns a pod with the same name/namespace as the CR
 func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 	labels := map[string]string{
 		"app":     cr.Name,
 		"version": "v0.1",
 	}
-	// yes := true
+	yes := true
 	no := false
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -641,8 +662,8 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name:    "busybox",
-					Image:   "quay.io/quay/busybox",
+					Name:    "fancy-alpine",
+					Image:   "quay.io/amacdona/strauss",
 					Command: []string{"sleep", "3600"},
 					// security best practices
 					SecurityContext: &corev1.SecurityContext{
@@ -650,7 +671,7 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{"ALL"},
 						},
-						// RunAsNonRoot: &yes,
+						RunAsNonRoot: &yes,
 						SeccompProfile: &corev1.SeccompProfile{
 							Type: corev1.SeccompProfileTypeRuntimeDefault,
 						},
@@ -660,6 +681,4 @@ func newPodForCR(cr *appv1alpha1.PodSet) *corev1.Pod {
 		},
 	}
 }
-
-
-
+```
