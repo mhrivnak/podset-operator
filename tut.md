@@ -247,9 +247,9 @@ another session, the CR with `kubectl apply -f config/samples/app_v1alpha1_podse
 
 ## Reporting back to the user with Status
 
-Our controller is now able to read values from the CR, now it is time to
+Our controller is now able to read values from the CR, so it is time to
 report back using the `PodSet.Status.PodNames`
-and`PodSet.Status.AvailableReplicas`  fields we created in the previous
+and`PodSet.Status.AvailableReplicas` fields we created in the previous
 step.
 
 Let's again edit our Reconcile function:
@@ -566,13 +566,15 @@ reality.
 `kubectl get pods`
 `kubectl get podset podset-sample -o yaml`
 
-Lets see if it can scale down too.
+Let's see if it can scale down too.
 
 `kubectl patch podset podset-sample --type='json' -p '[{"op": "replace", "path": "/spec/replicas", "value":1}]'`
 `kubectl get pods`
 `kubectl get podset podset-sample -o yaml`
 
-Our PodSet controller creates pods containing OwnerReferences in their metadata section. This ensures they will be removed upon deletion of the podset-sample CR.
+Our PodSet controller creates pods containing OwnerReferences in their metadata
+section. This ensures they will be removed upon deletion of the podset-sample
+CR.
 
 Observe the OwnerReference set on a PodSet’s pod:
 
